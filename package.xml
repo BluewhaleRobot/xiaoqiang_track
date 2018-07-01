@@ -1,0 +1,22 @@
+<package format="2">
+  <name>xiaoqiang_track</name>
+  <version>0.0.1</version>
+  <description>
+      use camera to track and follow target
+  </description>
+  <license>MIT</license>
+  <author email="randoms@bwbot.org">Randoms</author>
+  <maintainer email="randoms@bwbot.org">Randoms</maintainer>
+  <url type="website">http://github.com/bluewhalerobot/xiaoqiang_track</url>
+  <url type="bugtracker">https://github.com/bluewhalerobot/xiaoqiang_track/issues</url>
+  <url type="repository">https://github.com/bluewhalerobot/xiaoqiang_track</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <depend>message_generation</depend>
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+</package>

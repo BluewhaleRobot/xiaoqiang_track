@@ -1,0 +1,15 @@
+<launch>
+    <node name="xiaoqiang_track_kernel" pkg="xiaoqiang_track" type="track_kernel_node.py" output="screen">
+        <!-- baidu语音识别app_id,此参数要去百度开发者中心自己申请 -->
+        <param name="app_id" value="11468688" type="string"/>
+        <!-- baidu语音识别api_key,此参数要去百度开发者中心自己申请 -->
+        <param name="api_key" value="zYDLPERMvzaPpjlChkO6ZO4K"/>
+        <!-- baidu语音识别secret_key,此参数要去百度开发者中心自己申请 -->
+        <param name="secret_key" value="D6xBAQwgLnVGIv0sntSRDCG5awM3NdrA" />
+        <!-- 超时时间，超过这个时间则认为调用失败 -->
+        <param name="timeout" value="5000" />
+        <remap from="~image" to="/camera_node/image_raw" />
+        <remap from="~text" to="/xiaoqiang_tts/text" />
+    </node>
+    <include file="$(find xiaoqiang_tts)/launch/tts_xunfei.launch" />
+</launch>

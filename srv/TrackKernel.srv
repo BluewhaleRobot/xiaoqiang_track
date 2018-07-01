@@ -1,0 +1,7 @@
+---
+Header header
+float32 left
+float32 top
+float32 width
+float32 height
+sensor_msgs/Image frame
