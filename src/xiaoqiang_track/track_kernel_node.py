@@ -32,59 +32,111 @@ from std_msgs.msg import String
 import time
 from engines.baidu_track import BaiduTrack
 import json
+from tracker import Tracker
+import cv2
+from cv_bridge import CvBridge, CvBridgeError
 
-frame = None
+FRAME = None
+BODY_TRACKER = None
+IMAGE_PUB = None
+BRIDGE = CvBridge()
+
 def get_one_frame():
+    global FRAME
+    FRAME = None
+
     def set_frame(new_frame):
-        global frame
-        if frame is not None:
+        global FRAME
+        if FRAME is not None:
             return
-        frame = new_frame
+        FRAME = new_frame
 
     sub = rospy.Subscriber("~image", Image, set_frame)
     time_count = 0
     timeout = rospy.get_param("timeout", 5000)
-    while frame is None and time_count < timeout:
+    while FRAME is None and time_count < timeout:
         time.sleep(0.01)
         time_count += 10
     # unregister to improve performance
     sub.unregister()
-    if frame is None:
+    if FRAME is None:
         rospy.logerr("Cannot get image from image topic")
-    return frame
+    return FRAME
+
+
+def update_frame(new_frame):
+    try:   
+        cv_image = BRIDGE.imgmsg_to_cv2(new_frame, "bgr8")
+    except CvBridgeError, e:
+        rospy.logerr(e)
+    if BODY_TRACKER is None:
+        return
+    BODY_TRACKER.update_frame(cv_image)
+    IMAGE_PUB.publish(BRIDGE.cv2_to_imgmsg(cv_image, "bgr8"))
+
 
 if __name__ == "__main__":
     rospy.init_node("track_kernel_node", anonymous=True)
     talk_pub = rospy.Publisher("~text", String, queue_size=10)
+    IMAGE_PUB = rospy.Publisher("~processed_image", Image, queue_size=10)
     client = BaiduTrack()
+    BODY_TRACKER = Tracker(rospy.get_param("~tracker", "KCF"))
     # 告诉用户站在前面
     words = String()
     words.data = "请站在我前面"
     talk_pub.publish(words)
     # 提醒用户调整好距离
-    frame = get_one_frame()
-    no_kernel_flag = True
-    while no_kernel_flag:
-        if frame is not None:
-            rect = client.get_body_rect(frame)
-            if rect is None:
+    FRAME = get_one_frame()
+    body_rect = None
+    while True:
+        if FRAME is not None:
+            body_rect = client.get_body_rect(FRAME)
+            if body_rect is None:
                 words = String()
                 words.data = "我没有看到人,请站到我前面"
                 talk_pub.publish(words)
                 time.sleep(4)
-            
+            elif body_rect[0] + body_rect[2] / 2 > 370 or body_rect[0] + body_rect[2] / 2 < 270:
+                words = String()
+                words.data = "请站到镜头中间来"
+                talk_pub.publish(words)
+                time.sleep(4)
             else:
                 words = String()
-                words.data = "我看到人了,请站到我前面"
+                words.data = "我看到人了,开始追踪"
                 talk_pub.publish(words)
-                print(json.dumps(rect, indent=4))
+                rospy.loginfo(json.dumps(body_rect, indent=4))
                 time.sleep(4)
-        frame = None
-        frame = get_one_frame()
-        
+                break
+        time.sleep(4)
+        FRAME = get_one_frame()
 
     # 告诉用户可以开始走了
-
+    try:
+        cv_image = BRIDGE.imgmsg_to_cv2(FRAME, "bgr8")
+    except CvBridgeError, e:
+        rospy.logerr(e)
+    BODY_TRACKER.init_track(body_rect, cv_image)
+    rospy.Subscriber("~image", Image, update_frame)
     while not rospy.is_shutdown():
-        time.sleep(0.1)
-
+        time.sleep(10)
+        FRAME = get_one_frame()
+        body_rect = client.get_body_rect(FRAME)
+        if body_rect is None:
+            words = String()
+            words.data = "我没有看到人,请站到我前面"
+            talk_pub.publish(words)
+            time.sleep(4)
+            continue
+        else:
+            words = String()
+            words.data = "更新追踪位置"
+            talk_pub.publish(words)
+            rospy.loginfo(json.dumps(body_rect, indent=4))
+            time.sleep(4)
+        try:
+            cv_image = BRIDGE.imgmsg_to_cv2(FRAME, "bgr8")
+        except CvBridgeError, e:
+            rospy.logerr(e)
+        BODY_TRACKER = Tracker(rospy.get_param("~tracker", "KCF"))
+        BODY_TRACKER.init_track(body_rect, cv_image)

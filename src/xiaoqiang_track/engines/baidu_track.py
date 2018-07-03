@@ -25,7 +25,6 @@
 # Author: Randoms
 #
 
-import tempfile
 import time
 
 import rospy
@@ -34,6 +33,33 @@ from cv_bridge import CvBridge, CvBridgeError
 
 import cv2
 import json
+import math
+
+
+def get_rect(points):
+    left = -1
+    top = -1
+    right = -1
+    bottom = -1
+    for point in points:
+        if left == -1 or point["x"] < left:
+            left = point["x"]
+        if top == -1 or point["y"] < top:
+            top = point["y"]
+        if right == -1 or point["x"] > right:
+            right = point["x"]
+        if bottom == -1 or point["y"] > bottom:
+            bottom = point["y"]
+
+    return [left, top, right - left, bottom - top]
+
+
+def is_near(point1, point2):
+    if abs(point1[0] - 320) + abs(point1[1] - 240) >= abs(point2[0] - 320) + abs(point2[1] - 240):
+        return False
+    else:
+        return True
+
 
 class BaiduTrack:
 
@@ -50,24 +76,41 @@ class BaiduTrack:
             cv_image = self.bridge.imgmsg_to_cv2(frame, "bgr8")
         except CvBridgeError, e:
             print e
-        img, buf = cv2.imencode(".jpg", cv_image)
+        ok, buf = cv2.imencode(".jpg", cv_image)
+        if not ok:
+            rospy.logerr("image encode error")
         body_info = self.client.bodyAnalysis(buf)
+        rospy.loginfo(body_info)
         if body_info["person_num"] > 0:
-            persion_location = body_info["person_info"][0]["location"]
+            center_person = None
+            center_point = None
+            # 找最靠近图像中间的人
+            for person_info in body_info["person_info"]:
+                right_hip = person_info["body_parts"]["right_hip"]
+                left_hip = person_info["body_parts"]["left_hip"]
+                nose = person_info["body_parts"]["nose"]
+
+                persion_location = get_rect([right_hip, left_hip, nose])
+
+                if persion_location[3] < 50:
+                    persion_location[3] = 50
+                current_center = [persion_location[0] + persion_location[2] /
+                                  2, persion_location[1] + persion_location[3] / 2]
+                if center_point == None:
+                    center_point = current_center
+                    center_person = persion_location
+                if is_near(current_center, center_point):
+                    center_point = current_center
+                    center_person = persion_location
+                
+                # 同时考虑大小，取较大的
+
             cv2.rectangle(
-                cv_image, (int(persion_location["left"]), int(
-                    persion_location["top"])),
-                (int(persion_location["left"] + persion_location["width"]),
-                 int(persion_location["top"] + persion_location["height"])),
+                cv_image, (int(center_person[0]), int(
+                    center_person[1])),
+                (int(center_person[0] + center_person[2]),
+                 int(center_person[1] + center_person[3])),
                 (255, 0, 0))
-            cv2.imshow("image", cv_image)
-            cv2.waitKey()
-            return {
-                "left": int(persion_location["left"]),
-                "top": int(persion_location["top"]),
-                "right": int(persion_location["left"] + persion_location["width"]),
-                "bottom": int(persion_location["top"] + persion_location["height"])
-            }
-        cv2.imshow("image", cv_image)
-        cv2.waitKey()
+            return (int(center_person[0]), int(center_person[1]),
+                    int(center_person[2]), int(center_person[3]))
         return None
