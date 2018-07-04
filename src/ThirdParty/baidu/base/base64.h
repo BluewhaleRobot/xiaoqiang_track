@@ -31,7 +31,7 @@ namespace aip {
         return (isalnum(c) || (c == '+') || (c == '/'));
     }
     
-    std::string base64_encode(const char * bytes_to_encode, unsigned int in_len)
+    static std::string base64_encode(const char * bytes_to_encode, unsigned int in_len)
     {
         std::string ret;
         int i = 0;
@@ -84,7 +84,7 @@ namespace aip {
         return ret;
     }
     
-    std::string base64_decode(std::string const & encoded_string)
+    static std::string base64_decode(std::string const & encoded_string)
     {
         int in_len = (int) encoded_string.size();
         int i = 0;

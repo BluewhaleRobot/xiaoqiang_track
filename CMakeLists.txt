@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(xiaoqiang_track)
 
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 if(COMPILER_SUPPORTS_CXX11)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
    add_definitions(-DCOMPILEDWITHC11)
@@ -22,6 +24,7 @@ find_package(OpenCV REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
 pkg_check_modules(JSONCPP REQUIRED jsoncpp)
+pkg_check_modules(CURL REQUIRED libcurl)
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
@@ -30,7 +33,11 @@ include_directories(
   ${OPENSSL_INCLUDE_DIR}
   ${PROJECT_SOURCE_DIR}/include
   ${PROJECT_SOURCE_DIR}/src
-  ${PROJECT_SOURCE_DIR}/src/ThirdParty/baidu
+)
+
+add_message_files(
+  FILES
+  TrackTarget.msg
 )
 
 add_service_files(
@@ -45,12 +52,13 @@ generate_messages(
 )
 
 catkin_package(
-  CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs message_generation cv_bridge
+  CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs message_generation cv_bridge message_runtime
 )
 
 add_executable(tracking_node
   ${PROJECT_SOURCE_DIR}/src/tracking_node.cpp
   ${PROJECT_SOURCE_DIR}/src/baidu_track.cpp
+  ${PROJECT_SOURCE_DIR}/src/tracker.cpp
 )
 
 target_link_libraries(tracking_node
@@ -58,6 +66,7 @@ target_link_libraries(tracking_node
   ${OpenCV_LIBS}
   ${JSONCPP_LIBRARIES}
   ${OPENSSL_LIBRARIES}
+  ${CURL_LIBRARIES}
 )
 
 

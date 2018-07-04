@@ -6,7 +6,7 @@
 #include <sensor_msgs/Image.h>
 #include <opencv2/opencv.hpp>
 #include <json/json.h>
-#include "body_analysis.h"
+#include "ThirdParty/baidu/body_analysis.h"
 #include "xiaoqiang_track_point.h"
 
 namespace XiaoqiangTrack
@@ -60,7 +60,7 @@ class BaiduTrack
     std::string app_id;
     std::string api_key;
     std::string secret_key;
-    // aip::Bodyanalysis* client;
+    aip::Bodyanalysis* client;
 };
 
 } // namespace XiaoqiangTrack

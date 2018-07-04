@@ -1,0 +1,19 @@
+<launch>
+    <node name="xiaoqiang_tracking_node" pkg="xiaoqiang_track" type="tracking_node" output="screen">
+        <!-- baidu语音识别app_id,此参数要去百度开发者中心自己申请 -->
+        <param name="app_id" value="11479673" type="string"/>
+        <!-- baidu语音识别api_key,此参数要去百度开发者中心自己申请 -->
+        <param name="api_key" value="MDmnfs9A8xLxktOUDbFgX7nj"/>
+        <!-- baidu语音识别secret_key,此参数要去百度开发者中心自己申请 -->
+        <param name="secret_key" value="KpSdCV4Ufe0BfGzNiAMF4QZzUK9CwzCL" />
+        <param name="tracker" value="MOSSE" />
+        <remap from="~image" to="/camera_node/image_raw" />
+        <remap from="~text" to="/xiaoqiang_tts/text" />
+    </node>
+    <node name="tracking_controller_node" pkg="xiaoqiang_track" type="controller_node.py">
+        <remap from="~cmd_vel" to="/cmd_vel" />
+        <remap from="~target" to="/xiaoqiang_tracking_node/target" />
+    </node>
+    <include file="$(find xiaoqiang_tts)/launch/tts_xunfei.launch" />
+    <include file="$(find usb_cam)/launch/ov2610.launch" />
+</launch>

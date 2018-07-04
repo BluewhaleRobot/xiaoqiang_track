@@ -96,7 +96,7 @@ if __name__ == "__main__":
                 words.data = "我没有看到人,请站到我前面"
                 talk_pub.publish(words)
                 time.sleep(4)
-            elif body_rect[0] + body_rect[2] / 2 > 370 or body_rect[0] + body_rect[2] / 2 < 270:
+            elif body_rect[0] + body_rect[2] / 2 > 370 or body_rect[0] - body_rect[2] / 2 < 270:
                 words = String()
                 words.data = "请站到镜头中间来"
                 talk_pub.publish(words)

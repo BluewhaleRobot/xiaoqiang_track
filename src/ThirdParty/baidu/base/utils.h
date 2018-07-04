@@ -75,7 +75,7 @@ namespace aip {
         return time(NULL);
     }
     
-    std::string utc_time(time_t timestamp)
+    static std::string utc_time(time_t timestamp)
     {
         struct tm result_tm;
         char buffer[32];
@@ -91,7 +91,7 @@ namespace aip {
         return std::string(buffer, size);
     }
     
-    void url_parse(
+    static void url_parse(
                    const std::string & url,
                    std::map<std::string, std::string> & params)
     {
@@ -125,7 +125,7 @@ namespace aip {
         }
     }
     
-    std::string url_encode(const std::string & input, bool encode_slash=true)
+    static std::string url_encode(const std::string & input, bool encode_slash=true)
     {
         std::stringstream ss;
         const char *str = input.c_str();
@@ -146,7 +146,7 @@ namespace aip {
         return ss.str();
     }
     
-    std::string canonicalize_params(std::map<std::string, std::string> & params)
+    static std::string canonicalize_params(std::map<std::string, std::string> & params)
     {
         std::vector<std::string> v;
         v.reserve(params.size());
@@ -164,7 +164,7 @@ namespace aip {
         return result;
     }
     
-    std::string canonicalize_headers(std::map<std::string, std::string> & headers)
+    static std::string canonicalize_headers(std::map<std::string, std::string> & headers)
     {
         std::vector<std::string> v;
         v.reserve(headers.size());
@@ -182,7 +182,7 @@ namespace aip {
         return result;
     }
     
-    std::string get_headers_keys(std::map<std::string, std::string> & headers)
+    static std::string get_headers_keys(std::map<std::string, std::string> & headers)
     {
         std::vector<std::string> v;
         v.reserve(headers.size());
@@ -199,7 +199,7 @@ namespace aip {
         return result;
     }
     
-    std::string get_host(const std::string & url)
+    static std::string get_host(const std::string & url)
     {
         int pos = (int)url.find("://") + 3;
         return url.substr(
@@ -209,7 +209,7 @@ namespace aip {
     }
     
     
-    std::string get_path(const std::string & url)
+    static std::string get_path(const std::string & url)
     {
         int path_start = (int)url.find('/', url.find("://") + 3);
         int path_end = (int)url.find('?');
@@ -218,7 +218,7 @@ namespace aip {
         return url.substr(path_start, path_end - path_start);
     }
     
-    std::string hmac_sha256(
+    static std::string hmac_sha256(
                             const std::string & src,
                             const std::string & sk)
     {
@@ -243,7 +243,7 @@ namespace aip {
         return ss.str();
     }
     
-    void sign(
+    static void sign(
               std::string method,
               std::string & url,
               std::map<std::string, std::string> & params,

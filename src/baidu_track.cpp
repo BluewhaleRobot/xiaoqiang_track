@@ -8,12 +8,12 @@ BaiduTrack::BaiduTrack()
     ros::param::param<std::string>("~app_id", app_id, "");
     ros::param::param<std::string>("~api_key", api_key, "");
     ros::param::param<std::string>("~secret_key", secret_key, "");
-    // client = new aip::Bodyanalysis(app_id, api_key, secret_key);
+    client = new aip::Bodyanalysis(app_id, api_key, secret_key);
 }
 
 BaiduTrack::~BaiduTrack(void)
 {
-    // free(client);
+    free(client);
 }
 
 std::vector<int32_t> BaiduTrack::getBodyRect(sensor_msgs::Image frame)
@@ -25,17 +25,20 @@ std::vector<int32_t> BaiduTrack::getBodyRect(sensor_msgs::Image frame)
         ROS_ERROR_STREAM("Encode image error");
     }
     std::string image_data = std::string(buf.begin(), buf.end());
-    Json::Value body_info("");
-    // Json::Value body_info = client->body_analysis(image_data, aip::null);
+    Json::Value body_info = client->body_analysis(image_data, aip::null);
     ROS_INFO_STREAM(body_info.toStyledString());
     int person_num = body_info["person_num"].asInt();
     if (person_num > 0)
     {
+        ROS_INFO_STREAM("getBodyRect OK1");
         std::vector<float> center_person;
         Point center_point(-1, -1);
-        Json::Value persons = body_info["persion_info"];
+        Json::Value persons = body_info["person_info"];
+
+        ROS_INFO_STREAM("getBodyRect OK2");
         for (int i = 0; i < persons.size(); i++)
         {
+            ROS_INFO_STREAM("getBodyRect OK3");
             Json::Value person_info = persons[i];
             Point right_hip(
                 person_info["body_parts"]["right_hip"]["x"].asFloat(),
@@ -48,6 +51,7 @@ std::vector<int32_t> BaiduTrack::getBodyRect(sensor_msgs::Image frame)
                 person_info["body_parts"]["nose"]["y"].asFloat());
             std::vector<Point> rect_points{right_hip, left_hip, nose};
             std::vector<float> persion_location = get_rect(rect_points);
+            ROS_INFO_STREAM("getBodyRect OK4");
             if (persion_location[3] < 50)
             {
                 // 最小宽度50
@@ -67,6 +71,11 @@ std::vector<int32_t> BaiduTrack::getBodyRect(sensor_msgs::Image frame)
                 center_point = current_center;
                 center_person = persion_location;
             }
+            ROS_INFO_STREAM("getBodyRect OK5");
+        }
+        if(center_person[2] > 200){
+            // 正常不应该这么宽，识别错误
+            return std::vector<int32_t>();
         }
         cv::rectangle(
             cv_image,
