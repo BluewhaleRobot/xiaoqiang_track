@@ -59,6 +59,7 @@ add_executable(tracking_node
   ${PROJECT_SOURCE_DIR}/src/tracking_node.cpp
   ${PROJECT_SOURCE_DIR}/src/baidu_track.cpp
   ${PROJECT_SOURCE_DIR}/src/tracker.cpp
+  ${PROJECT_SOURCE_DIR}/src/body_pose_track.cpp
 )
 
 target_link_libraries(tracking_node

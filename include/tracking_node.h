@@ -8,7 +8,8 @@
 #include <sensor_msgs/Image.h>
 #include <std_msgs/String.h>
 #include <cv_bridge/cv_bridge.h>
-#include "baidu_track.h"
+// #include "baidu_track.h"
+#include "body_pose_track.h"
 #include "tracker.h"
 #include <mutex>
 #include <xiaoqiang_track/TrackTarget.h>

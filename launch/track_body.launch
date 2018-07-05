@@ -1,12 +1,24 @@
 <launch>
-    <node name="xiaoqiang_track_body_node" pkg="xiaoqiang_track" type="track_body.py" output="screen">
-        <remap from="~image" to="/camera_node/image_raw" />
-        <remap from="~text" to="/xiaoqiang_tts/text" />
-    </node>
-    <!-- <node name="tracking_controller_node" pkg="xiaoqiang_track" type="controller_node.py">
+    <node name="body_pose" pkg="body_pose" type="body_pose_node.py" output="screen"></node>
+    
+    <node name="tracking_controller_node" pkg="xiaoqiang_track" type="controller_node.py" output="screen">
+        <param name="p" value="0.007" />
+        <param name="i" value="0.0045" />
+        <param name="d" value="0.001" />
+        <param name="sample_rate" value="30" />
+        <param name="max_angle_speed" value="1" />
+        <param name="max_linear_speed" value="0.8" />
         <remap from="~cmd_vel" to="/cmd_vel" />
         <remap from="~target" to="/xiaoqiang_tracking_node/target" />
-    </node> -->
+    </node>
+
+    <node name="xiaoqiang_tracking_node" pkg="xiaoqiang_track" type="tracking_node" output="screen">
+        <param name="tracker" value="MOSSE" />
+        <remap from="~image" to="/camera_node/image_raw" />
+        <remap from="~text" to="/xiaoqiang_tts/text" />
+        <remap from="~get_body_pose" to="/body_pose/get_body_pose" />
+    </node>
+
     <include file="$(find xiaoqiang_tts)/launch/tts_xunfei.launch" />
     <include file="$(find usb_cam)/launch/ov2610.launch" />
 </launch>

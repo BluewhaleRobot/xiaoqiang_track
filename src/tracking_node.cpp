@@ -37,8 +37,8 @@ Rect2d body_rect;
 ros::Publisher image_pub;
 ros::Publisher target_pub;
 std::mutex update_track_mutex;
-bool track_ok_flag = false;
-
+int track_ok_flag = 0;
+cv::Rect2d previous_body_rect;
 
 sensor_msgs::Image get_one_frame()
 {
@@ -53,13 +53,15 @@ void update_frame(const sensor_msgs::ImageConstPtr &new_frame)
     if (tracker == NULL)
         return;
     unique_lock<mutex> lock(update_track_mutex);
+    previous_body_rect = body_rect;
     track_ok_flag = tracker->updateFrame(cv_image, body_rect);
     cv::rectangle(cv_image, body_rect, cv::Scalar(0, 255, 0));
     image_pub.publish(cv_ptr->toImageMsg());
     xiaoqiang_track::TrackTarget target;
     target.x = body_rect.x + body_rect.width / 2;
     target.y = body_rect.y + body_rect.height / 2;
-    if(!track_ok_flag){
+    if (track_ok_flag == 0)
+    {
         // send stop
         target.x = 0;
         target.y = 0;
@@ -78,7 +80,8 @@ int main(int argc, char **argv)
     image_pub = private_nh.advertise<sensor_msgs::Image>("processed_image", 10);
     target_pub = private_nh.advertise<xiaoqiang_track::TrackTarget>("target", 10);
     ros::Subscriber image_sub = private_nh.subscribe("image", 10, update_frame);
-    BaiduTrack client;
+    // BaiduTrack client;
+    BodyTrack client(private_nh);
     std::string tracker_type;
     ros::param::param<std::string>("~tracker", tracker_type, "");
     tracker = new XiaoqiangTrack::Tracker(tracker_type);
@@ -97,34 +100,26 @@ int main(int argc, char **argv)
         if (frame.data.size() != 0)
         {
             ROS_INFO_STREAM("OK4");
-            std::vector<int> rect = client.getBodyRect(frame);
-            if (rect.size() == 0)
+            cv::Rect2d rect = client.getBodyRect(frame);
+            if (rect.x <= 1)
             {
                 words.data = "我没有看到人,请站到我前面";
                 talk_pub.publish(words);
-                sleep(4);
             }
-            else if (rect[0] + rect[2] / 2 > 440 || rect[0] - rect[2] / 2 < 200)
+            else if (rect.x + rect.width / 2 > 440 || rect.x + rect.width / 2 < 200)
             {
-                body_rect.x = rect[0];
-                body_rect.y = rect[1];
-                body_rect.width = rect[2];
-                body_rect.height = rect[3];
+                ROS_INFO_STREAM("rect: " << rect);
+                body_rect = rect;
                 ROS_INFO_STREAM(body_rect);
                 words.data = "请站到镜头中间来";
                 talk_pub.publish(words);
-                sleep(4);
             }
             else
             {
-                body_rect.x = rect[0];
-                body_rect.y = rect[1];
-                body_rect.width = rect[2];
-                body_rect.height = rect[3];
+                body_rect = rect;
                 words.data = "我看到人了,开始追踪";
                 talk_pub.publish(words);
                 ROS_INFO_STREAM(body_rect);
-                sleep(4);
                 break;
             }
         }
@@ -137,42 +132,78 @@ int main(int argc, char **argv)
     cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(tracking_frame, "bgr8");
     cv::Mat cv_image = cv_ptr->image;
     tracker->initTracker(cv_image, body_rect);
+    int repeat_count = 0;
+    int watch_dog = 0;
     while (ros::ok())
     {
         sleep(1);
-        if(body_rect.width < 300 && body_rect.height < 300 && track_ok_flag && body_rect.height > body_rect.width){
-            continue;
-        }
-        tracking_frame = get_one_frame();
-        ROS_INFO_STREAM("Body check frame");
-        ROS_INFO_STREAM(tracking_frame.header.stamp);
-        std::vector<int> rect = client.getBodyRect(tracking_frame);
-        if (rect.size() == 0)
+        // 如果位置不变，则认为可能丢失
+        if (previous_body_rect == body_rect)
         {
-            words.data = "我没有看到人,请站到我前面";
+            repeat_count += 1;
+            if (repeat_count == 10)
+            {
+                ROS_WARN_STREAM("Target not move, may lost");
+                repeat_count = 0;
+                track_ok_flag = 0;
+            }
+        }
+        else
+        {
+            repeat_count = 0;
+        }
+        ROS_INFO_STREAM("track_ok_flag: " << track_ok_flag);
+        if (body_rect.width < 300 && body_rect.height < 300 && track_ok_flag == 2 && body_rect.height > body_rect.width)
+        {
+            watch_dog++;
+            if (watch_dog > 3)
+            {
+                words.data = "三秒更新";
+                talk_pub.publish(words);
+            }
+            else
+            {
+                continue;
+            }
+        }
+        watch_dog = 0;
+
+        tracking_frame = get_one_frame();
+        cv::Rect2d rect = client.getBodyRect(tracking_frame);
+        ROS_INFO_STREAM("Rect: " << rect);
+        if (rect.x <= 1)
+        {
+            words.data = "没人";
             talk_pub.publish(words);
-            sleep(4);
+            tracker->stop();
         }
         else
         {
             {
-                ROS_INFO_STREAM("rect: " << rect[0] << " " << rect[1] << " " << rect[2] << " " << rect[3]);
+                ROS_INFO_STREAM("Rect: " << rect);
                 unique_lock<mutex> lock(update_track_mutex);
-                body_rect.x = rect[0];
-                body_rect.y = rect[1];
-                body_rect.width = rect[2];
-                body_rect.height = rect[3];
+                body_rect = rect;
                 ROS_INFO_STREAM(body_rect);
                 ROS_INFO_STREAM("track frame");
                 ROS_INFO_STREAM(tracking_frame.header.stamp);
                 cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(tracking_frame, "bgr8");
                 cv::Mat cv_image = cv_ptr->image;
-                tracker->reset(cv_image, body_rect);
+                if (track_ok_flag == 0)
+                    tracker->reset(cv_image, body_rect, true);
+                else
+                    tracker->reset(cv_image, body_rect);
             }
-            words.data = "我看到人了,更新追踪位置";
+            if (body_rect.width * body_rect.height < 40 * 100)
+            {
+                words.data = "太远";
+            }
+            else
+            {
+                words.data = "更新位置";
+            }
+
             talk_pub.publish(words);
             ROS_INFO_STREAM(body_rect);
-            sleep(4);
         }
     }
 }

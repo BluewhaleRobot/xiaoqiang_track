@@ -1,24 +1,20 @@
-#ifndef __BAIDU_TRACK_H__
-#define __BAIDU_TRACK_H__
+#ifndef __BODY_POSE_TRACK_H__
+#define __BODY_POSE_TRACK_H__
 
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 #include <opencv2/opencv.hpp>
-#include <json/json.h>
-#include "ThirdParty/baidu/body_analysis.h"
-#include "xiaoqiang_track_point.h"
+#include <body_pose/BodyPose.h>
 
 namespace XiaoqiangTrack
 {
-
-class BaiduTrack
+class BodyTrack
 {
-
   public:
-    BaiduTrack();
-    ~BaiduTrack(void);
-    static std::vector<float> get_rect(std::vector<Point> points)
+    BodyTrack(ros::NodeHandle nh);
+    ~BodyTrack();
+    static cv::Rect2d getRect(std::vector<cv::Point> points)
     {
         float left = -1;
         float top = -1;
@@ -26,7 +22,7 @@ class BaiduTrack
         float bottom = -1;
         for (int i = 0; i < points.size(); i++)
         {
-            Point point = points[i];
+            cv::Point point = points[i];
             if (left < 0 || point.x < left)
                 left = point.x;
             if (top < 0 || point.y < top)
@@ -37,7 +33,7 @@ class BaiduTrack
                 bottom = point.y;
         }
 
-        return std::vector<float>{left, top, right - left, bottom - top};
+        return cv::Rect2d(left, top, right - left, bottom - top);
     };
 
     static float abs(float num)
@@ -47,7 +43,7 @@ class BaiduTrack
         return num;
     };
 
-    static bool isNear(Point point1, Point point2)
+    static bool isNear(cv::Point point1, cv::Point point2)
     {
         if (abs(point1.x - 320) + abs(point1.y - 240) >= abs(point2.x - 320) + abs(point2.y - 240))
             return false;
@@ -64,7 +60,7 @@ class BaiduTrack
         {
             cv::Rect2d target = targets[i];
             float target_value = target.width * target.height * 0.01 - abs(target.x - 320);
-            if(target_value > current_target_value)
+            if (target_value > current_target_value)
             {
                 current_target_value = target_value;
                 target_rect = target;
@@ -73,15 +69,14 @@ class BaiduTrack
         return target_rect;
     }
 
+    static cv::Rect2d bodyInfo2Rect2d(body_pose::BodyInfo body_info);
+
     cv::Rect2d getBodyRect(sensor_msgs::Image frame);
 
   private:
-    std::string app_id;
-    std::string api_key;
-    std::string secret_key;
-    aip::Bodyanalysis *client;
+    ros::NodeHandle nh;
+    ros::ServiceClient client;
 };
-
 } // namespace XiaoqiangTrack
 
 #endif

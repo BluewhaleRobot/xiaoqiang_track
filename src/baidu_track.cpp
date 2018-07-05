@@ -16,7 +16,7 @@ BaiduTrack::~BaiduTrack(void)
     free(client);
 }
 
-std::vector<int32_t> BaiduTrack::getBodyRect(sensor_msgs::Image frame)
+cv::Rect2d BaiduTrack::getBodyRect(sensor_msgs::Image frame)
 {
     cv::Mat cv_image = cv_bridge::toCvCopy(frame, "bgr8")->image;
     std::vector<uchar> buf;
@@ -25,17 +25,24 @@ std::vector<int32_t> BaiduTrack::getBodyRect(sensor_msgs::Image frame)
         ROS_ERROR_STREAM("Encode image error");
     }
     std::string image_data = std::string(buf.begin(), buf.end());
+    // client->access_token = "";
     Json::Value body_info = client->body_analysis(image_data, aip::null);
     ROS_INFO_STREAM(body_info.toStyledString());
+    if(body_info.get("error_code", "").asString() == "null")
+    {
+        ROS_INFO_STREAM("Call API Failed");
+        client->access_token = "";
+    }
+        
     int person_num = body_info["person_num"].asInt();
     if (person_num > 0)
     {
         ROS_INFO_STREAM("getBodyRect OK1");
-        std::vector<float> center_person;
-        Point center_point(-1, -1);
+        cv::Rect2d center_person;
         Json::Value persons = body_info["person_info"];
 
         ROS_INFO_STREAM("getBodyRect OK2");
+        std::vector<cv::Rect2d> bodys;
         for (int i = 0; i < persons.size(); i++)
         {
             ROS_INFO_STREAM("getBodyRect OK3");
@@ -50,43 +57,39 @@ std::vector<int32_t> BaiduTrack::getBodyRect(sensor_msgs::Image frame)
                 person_info["body_parts"]["nose"]["x"].asFloat(),
                 person_info["body_parts"]["nose"]["y"].asFloat());
             std::vector<Point> rect_points{right_hip, left_hip, nose};
-            std::vector<float> persion_location = get_rect(rect_points);
+            std::vector<float> person_location = get_rect(rect_points);
             ROS_INFO_STREAM("getBodyRect OK4");
-            if (persion_location[3] < 50)
+            if (person_location[2] < 50)
             {
                 // 最小宽度50
-                persion_location[3] = 50;
-            }
-            Point current_center(
-                persion_location[0] + persion_location[2] / 2,
-                persion_location[1] + persion_location[3] / 2);
-            if (center_point.x < 0)
-            {
-                center_point = current_center;
-                center_person = persion_location;
+                person_location[2] = 50;
             }
 
-            if (isNear(current_center, center_point))
+            if(person_location[2] > 200)
             {
-                center_point = current_center;
-                center_person = persion_location;
+                // 正常不应该这么宽，识别错误
+                continue;
             }
+            bodys.push_back(cv::Rect2d(person_location[0], person_location[1], person_location[2], person_location[3]));
+
             ROS_INFO_STREAM("getBodyRect OK5");
         }
-        if(center_person[2] > 200){
-            // 正常不应该这么宽，识别错误
-            return std::vector<int32_t>();
+        // center_person
+        ROS_INFO_STREAM("bodys");
+        for(int i=0;i<bodys.size(); i++)
+        {
+            ROS_INFO_STREAM("rect: " << bodys[i]);
         }
+        center_person = selectTarget(bodys);
+        ROS_INFO_STREAM("center persion: " << center_person);
         cv::rectangle(
             cv_image,
-            cvPoint(int(center_person[0]), int(center_person[1])),
-            cvPoint(int(center_person[0] + center_person[2]), int(center_person[1] + center_person[3])),
+            cvPoint(int(center_person.x), int(center_person.y)),
+            cvPoint(int(center_person.x + center_person.width), int(center_person.y + center_person.height)),
             cvScalar(255, 0, 0));
-        return std::vector<int32_t>{
-            int(center_person[0]), int(center_person[1]),
-            int(center_person[2]), int(center_person[3])};
+        return center_person;
     }
-    return std::vector<int32_t>();
+    return cv::Rect2d(0,0,0,0);
 }
 
 } // namespace XiaoqiangTrack

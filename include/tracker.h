@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/core/ocl.hpp>
+#include <ros/ros.h>
 
 #define SSTR(x) static_cast<std::ostringstream &>(           \
                     (std::ostringstream() << std::dec << x)) \
@@ -16,13 +17,19 @@ class Tracker
   public:
     Tracker(std::string tracker_type);
     void initTracker(cv::Mat &frame, cv::Rect2d &bbox);
-    bool updateFrame(cv::Mat &frame, cv::Rect2d &bbox);
-    void reset(cv::Mat frame, cv::Rect2d &bbox);
+    int updateFrame(cv::Mat &frame, cv::Rect2d &bbox);
+    void reset(cv::Mat frame, cv::Rect2d &bbox, bool reset_all=false);
+    void stop();
 
   private:
-    cv::Ptr<cv::Tracker> tracker;
+    cv::Ptr<cv::Tracker> tracker1;
+    cv::Ptr<cv::Tracker> tracker2;
+    bool tracking_status1;
+    bool tracking_status2;
     bool init_flag;
     std::string tracker_type;
+    cv::Rect2d rect1;
+    cv::Rect2d rect2;
 };
 
 static void sobelExtractor(const cv::Mat img, const cv::Rect roi, cv::Mat &feat)
