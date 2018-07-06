@@ -79,6 +79,8 @@ int main(int argc, char **argv)
     ros::Publisher talk_pub = private_nh.advertise<std_msgs::String>("text", 10);
     image_pub = private_nh.advertise<sensor_msgs::Image>("processed_image", 10);
     target_pub = private_nh.advertise<xiaoqiang_track::TrackTarget>("target", 10);
+    int watch_dog;
+    private_nh.param("watch_dog", watch_dog, 2);
     ros::Subscriber image_sub = private_nh.subscribe("image", 10, update_frame);
     // BaiduTrack client;
     BodyTrack client(private_nh);
@@ -101,7 +103,7 @@ int main(int argc, char **argv)
         {
             ROS_INFO_STREAM("OK4");
             cv::Rect2d rect = client.getBodyRect(frame);
-            if (rect.x <= 1)
+            if (rect.x <= 1 || rect.y <= 1)
             {
                 words.data = "我没有看到人,请站到我前面";
                 talk_pub.publish(words);
@@ -133,15 +135,15 @@ int main(int argc, char **argv)
     cv::Mat cv_image = cv_ptr->image;
     tracker->initTracker(cv_image, body_rect);
     int repeat_count = 0;
-    int watch_dog = 0;
+    int watch_dog_count = 0;
     while (ros::ok())
     {
-        sleep(1);
+        usleep(1000 * 100); // 100ms
         // 如果位置不变，则认为可能丢失
         if (previous_body_rect == body_rect)
         {
-            repeat_count += 1;
-            if (repeat_count == 10)
+            repeat_count += 100;
+            if (repeat_count == 5 * 1000)
             {
                 ROS_WARN_STREAM("Target not move, may lost");
                 repeat_count = 0;
@@ -155,26 +157,28 @@ int main(int argc, char **argv)
         ROS_INFO_STREAM("track_ok_flag: " << track_ok_flag);
         if (body_rect.width < 300 && body_rect.height < 300 && track_ok_flag == 2 && body_rect.height > body_rect.width)
         {
-            watch_dog++;
-            if (watch_dog > 3)
+
+            ROS_INFO_STREAM("watch_dog: " << watch_dog);
+            watch_dog_count += 100;
+            if (watch_dog_count > watch_dog * 1000)
             {
-                words.data = "三秒更新";
-                talk_pub.publish(words);
+                // words.data = "五秒更新";
+                // talk_pub.publish(words);
             }
             else
             {
                 continue;
             }
         }
-        watch_dog = 0;
+        watch_dog_count = 0;
 
         tracking_frame = get_one_frame();
         cv::Rect2d rect = client.getBodyRect(tracking_frame);
         ROS_INFO_STREAM("Rect: " << rect);
-        if (rect.x <= 1)
+        if (rect.x <= 1 || rect.y <= 1)
         {
-            words.data = "没人";
-            talk_pub.publish(words);
+            // words.data = "没人";
+            // talk_pub.publish(words);
             tracker->stop();
         }
         else
@@ -189,20 +193,20 @@ int main(int argc, char **argv)
                 cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(tracking_frame, "bgr8");
                 cv::Mat cv_image = cv_ptr->image;
                 if (track_ok_flag == 0)
+                {
                     tracker->reset(cv_image, body_rect, true);
+                    // words.data = "别走太快";
+                    // talk_pub.publish(words);
+                }
+                    
                 else
                     tracker->reset(cv_image, body_rect);
             }
             if (body_rect.width * body_rect.height < 40 * 100)
             {
                 words.data = "太远";
+                talk_pub.publish(words);
             }
-            else
-            {
-                words.data = "更新位置";
-            }
-
-            talk_pub.publish(words);
             ROS_INFO_STREAM(body_rect);
         }
     }

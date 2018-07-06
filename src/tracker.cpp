@@ -93,19 +93,17 @@ int Tracker::updateFrame(cv::Mat &frame, cv::Rect2d &bbox)
     double timer = (double)cv::getTickCount();
 
     // Update the tracking result
-    // rect1 = bbox;
-    // rect2 = bbox;
-    
+
     tracking_status1 = tracker1->update(frame, rect1);
     tracking_status2 = tracker2->update(frame, rect2);
 
     // 错误结果，判定为无效
-    if(rect1.width > 300 || rect1.height > 300)
+    if (rect1.width > 300 || rect1.height > 300)
     {
         tracking_status1 = false;
     }
     // 错误结果，判定为无效
-    if(rect2.width > 300 || rect2.height > 300)
+    if (rect2.width > 300 || rect2.height > 300)
     {
         tracking_status2 = false;
     }
@@ -161,18 +159,22 @@ int Tracker::updateFrame(cv::Mat &frame, cv::Rect2d &bbox)
 void Tracker::reset(cv::Mat frame, cv::Rect2d &bbox, bool reset_all)
 {
     init_flag = false;
-    if (!tracking_status1 || reset_all)
+    double dis1 = cv::norm(cv::Point(rect1.x + rect1.width / 2, rect1.y + rect1.height / 2)
+         - cv::Point(bbox.x + bbox.width / 2, bbox.y + bbox.height / 2));
+    double dis2 = cv::norm(cv::Point(rect2.x + rect2.width / 2, rect2.y + rect2.height / 2)
+         - cv::Point(bbox.x + bbox.width / 2, bbox.y + bbox.height / 2));
+    if (!tracking_status1 || reset_all || dis1 > 80)
     {
         tracking_status1 = false;
         tracker1->clear();
     }
-        
-    if (!tracking_status2 || reset_all)
+
+    if (!tracking_status2 || reset_all || dis2 > 80)
     {
         tracking_status2 = false;
         tracker2->clear();
     }
-        
+
     initTracker(frame, bbox);
 }
 

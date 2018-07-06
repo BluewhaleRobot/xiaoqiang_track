@@ -55,7 +55,7 @@ def update_target(target):
     if output > max_angle_speed:
         output = max_angle_speed
     speed.angular.z = output
-    speed.linear.x = max_linear_speed * math.exp(-(target.x - 320)*(target.x - 320)/ (2 * 800*800))
+    speed.linear.x = max_linear_speed * math.exp(-(target.x - 320.0)*(target.x - 320.0)/ (2 * 40*40))
     
     SPEED_PUB.publish(speed)
         

@@ -38,7 +38,7 @@ cv::Rect2d BodyTrack::getBodyRect(sensor_msgs::Image frame)
             person_location.width = 50;
         if (person_location.width > 200)
             continue;
-        if (person_location.height == 0)
+        if (person_location.height <= 1)
             continue;
         bodys.push_back(person_location);
     }
