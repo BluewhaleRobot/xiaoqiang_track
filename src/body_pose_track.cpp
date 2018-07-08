@@ -1,17 +1,41 @@
+/******************************************************************************
+*
+* The MIT License (MIT)
+*
+* Copyright (c) 2018 Bluewhale Robot
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*
+* Author: Randoms
+*******************************************************************************/
+
 #include "body_pose_track.h"
 
 namespace XiaoqiangTrack
 {
-BodyTrack::BodyTrack(ros::NodeHandle nh)
+BodyTrack::BodyTrack(ros::NodeHandle nh):PoseTracker(nh)
 {
+    
     ROS_INFO_STREAM("Waitting for get_body_pose service");
     client = nh.serviceClient<body_pose::BodyPose>("get_body_pose");
     client.waitForExistence();
     ROS_INFO_STREAM("Waitting for get_body_pose service succeed");
-}
-
-BodyTrack::~BodyTrack()
-{
 }
 
 cv::Rect2d BodyTrack::getBodyRect(sensor_msgs::Image frame)
@@ -19,14 +43,13 @@ cv::Rect2d BodyTrack::getBodyRect(sensor_msgs::Image frame)
     body_pose::BodyPose req = body_pose::BodyPose();
     req.request.image = frame;
     if (!client.call(req))
-    {   
+    {
         ROS_ERROR_STREAM("call get_body_pose service failed");
         return cv::Rect2d(0, 0, 0, 0);
     }
 
     if (req.response.body_poses.size() == 0)
     {
-        ROS_INFO_STREAM("Found no body in image");
         return cv::Rect2d(0, 0, 0, 0);
     }
 

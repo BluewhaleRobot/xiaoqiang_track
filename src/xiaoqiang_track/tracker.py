@@ -25,8 +25,9 @@
 # Author: Randoms
 #
 
-import cv2
 import sys
+
+import cv2
 import rospy
 
 (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
@@ -46,17 +47,17 @@ class Tracker:
         if int(minor_ver) < 3:
             self.tracker = cv2.Tracker_create(self.tracker_type)
         else:
-            if self.tracker_type == 'BOOSTING': # 会漂，追踪还行
+            if self.tracker_type == 'BOOSTING':  # 会漂，追踪还行
                 self.tracker = cv2.TrackerBoosting_create()
-            if self.tracker_type == 'MIL': # 会不停的漂，追踪还行
+            if self.tracker_type == 'MIL':  # 会不停的漂，追踪还行
                 self.tracker = cv2.TrackerMIL_create()
-            if self.tracker_type == 'KCF': #追踪效果很差
+            if self.tracker_type == 'KCF':  # 追踪效果很差
                 self.tracker = cv2.TrackerKCF_create()
-            if self.tracker_type == 'TLD': #效果很不好
+            if self.tracker_type == 'TLD':  # 效果很不好
                 self.tracker = cv2.TrackerTLD_create()
-            if self.tracker_type == 'MEDIANFLOW': # 有尺度会丢失，追踪效果不好
+            if self.tracker_type == 'MEDIANFLOW':  # 有尺度会丢失，追踪效果不好
                 self.tracker = cv2.TrackerMedianFlow_create()
-            if self.tracker_type == 'GOTURN': # 无法运行
+            if self.tracker_type == 'GOTURN':  # 无法运行
                 self.tracker = cv2.TrackerGOTURN_create()
         self.init_flag = False
 
@@ -80,4 +81,3 @@ class Tracker:
         cv2.putText(frame, self.tracker_type + " Tracker", (100, 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50, 170, 50), 2)
         return (int(bbox[0]), int(bbox[1]), int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
-

@@ -1,0 +1,31 @@
+<launch>
+    <node name="xiaoqiang_tracking_node" pkg="xiaoqiang_track" type="tracking_node" output="screen">
+        <param name="pose_tracker" value="baidu" />
+        <!-- baidu人体识别app_id,此参数要去百度开发者中心自己申请 -->
+        <param name="app_id" value="11468688" type="string"/>
+        <!-- baidu人体识别api_key,此参数要去百度开发者中心自己申请 -->
+        <param name="api_key" value="zYDLPERMvzaPpjlChkO6ZO4K"/>
+        <!-- baidu人体识别secret_key,此参数要去百度开发者中心自己申请 -->
+        <param name="secret_key" value="D6xBAQwgLnVGIv0sntSRDCG5awM3NdrA" />
+        <!-- 超时时间，超过这个时间则认为调用失败 -->
+        <param name="timeout" value="5000" />
+        <param name="tracker_main" value="MOSSE" />
+        <param name="tracker_aided" value="MEDIANFLOW" />
+        <remap from="~image" to="/camera_node/image_raw" />
+        <remap from="~text" to="/xiaoqiang_tts/text" />
+    </node>
+
+    <node name="tracking_controller_node" pkg="xiaoqiang_track" type="controller_node.py">
+        <param name="p" value="0.007" />
+        <param name="i" value="0.0045" />
+        <param name="d" value="0.001" />
+        <param name="sample_rate" value="30" />
+        <param name="max_angle_speed" value="1" />
+        <param name="max_linear_speed" value="0.4" />
+        <remap from="~cmd_vel" to="/cmd_vel" />
+        <remap from="~target" to="/xiaoqiang_tracking_node/target" />
+    </node>
+
+    <include file="$(find xiaoqiang_tts)/launch/tts_xunfei.launch" />
+    <include file="$(find usb_cam)/launch/ov2610.launch" />
+</launch>

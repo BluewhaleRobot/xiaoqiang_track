@@ -25,15 +25,14 @@
 # Author: Randoms
 #
 
+import json
+import math
 import time
 
+import cv2
 import rospy
 from aip import AipBodyAnalysis
 from cv_bridge import CvBridge, CvBridgeError
-
-import cv2
-import json
-import math
 
 
 def get_rect(points):
@@ -102,7 +101,7 @@ class BaiduTrack:
                 if is_near(current_center, center_point):
                     center_point = current_center
                     center_person = persion_location
-                
+
                 # 同时考虑大小，取较大的
 
             cv2.rectangle(

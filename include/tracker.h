@@ -1,3 +1,30 @@
+/******************************************************************************
+*
+* The MIT License (MIT)
+*
+* Copyright (c) 2018 Bluewhale Robot
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*
+* Author: Randoms
+*******************************************************************************/
+
 #ifndef __TRACKER_H__
 #define __TRACKER_H__
 
@@ -15,68 +42,24 @@ namespace XiaoqiangTrack
 class Tracker
 {
   public:
-    Tracker(std::string tracker_type);
+    Tracker(std::string tracker_main_type, std::string tracker_aided_type);
     void initTracker(cv::Mat &frame, cv::Rect2d &bbox);
     int updateFrame(cv::Mat &frame, cv::Rect2d &bbox);
-    void reset(cv::Mat frame, cv::Rect2d &bbox, bool reset_all=false);
+    void reset(cv::Mat frame, cv::Rect2d &bbox, bool reset_all = false);
     void stop();
 
   private:
-    cv::Ptr<cv::Tracker> tracker1;
-    cv::Ptr<cv::Tracker> tracker2;
-    bool tracking_status1;
-    bool tracking_status2;
-    bool init_flag;
-    std::string tracker_type;
-    cv::Rect2d rect1;
-    cv::Rect2d rect2;
-};
-
-static void sobelExtractor(const cv::Mat img, const cv::Rect roi, cv::Mat &feat)
-{
-    cv::Mat sobel[2];
-    cv::Mat patch;
-    cv::Rect region = roi;
-
-    // extract patch inside the image
-    if (roi.x < 0)
-    {
-        region.x = 0;
-        region.width += roi.x;
-    }
-    if (roi.y < 0)
-    {
-        region.y = 0;
-        region.height += roi.y;
-    }
-    if (roi.x + roi.width > img.cols)
-        region.width = img.cols - roi.x;
-    if (roi.y + roi.height > img.rows)
-        region.height = img.rows - roi.y;
-    if (region.width > img.cols)
-        region.width = img.cols;
-    if (region.height > img.rows)
-        region.height = img.rows;
-
-    patch = img(region).clone();
-    cvtColor(patch, patch, CV_BGR2GRAY);
-
-    // add some padding to compensate when the patch is outside image border
-    int addTop, addBottom, addLeft, addRight;
-    addTop = region.y - roi.y;
-    addBottom = (roi.height + roi.y > img.rows ? roi.height + roi.y - img.rows : 0);
-    addLeft = region.x - roi.x;
-    addRight = (roi.width + roi.x > img.cols ? roi.width + roi.x - img.cols : 0);
-
-    copyMakeBorder(patch, patch, addTop, addBottom, addLeft, addRight, cv::BORDER_REPLICATE);
-
-    Sobel(patch, sobel[0], CV_32F, 1, 0, 1);
-    Sobel(patch, sobel[1], CV_32F, 0, 1, 1);
-
-    merge(sobel, 2, feat);
-
-    feat.convertTo(feat, CV_64F);
-    feat = feat / 255.0 - 0.5; // normalize to range -0.5 .. 0.5
+    cv::Ptr<cv::Tracker> tracker_main;
+    cv::Ptr<cv::Tracker> tracker_aided;
+    bool tracker_main_status;
+    bool tracker_aided_status;
+    bool inited_flag;
+    std::string tracker_main_type;
+    std::string tracker_aided_type;
+    cv::Rect2d rect_main;
+    cv::Rect2d rect_aided;
+    cv::Ptr<cv::Tracker> getTracker(std::string tracker_type);
+    bool getTrackType(std::string tracker_type);
 };
 } // namespace XiaoqiangTrack
 

@@ -25,21 +25,24 @@
 # Author: Randoms
 #
 
+import json
+import time
+
+import cv2
 import rospy
-from xiaoqiang_track.srv import TrackKernel
+from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
-import time
+from xiaoqiang_track.srv import TrackKernel
+
 from engines.baidu_track import BaiduTrack
-import json
 from tracker import Tracker
-import cv2
-from cv_bridge import CvBridge, CvBridgeError
 
 FRAME = None
 BODY_TRACKER = None
 IMAGE_PUB = None
 BRIDGE = CvBridge()
+
 
 def get_one_frame():
     global FRAME
@@ -65,7 +68,7 @@ def get_one_frame():
 
 
 def update_frame(new_frame):
-    try:   
+    try:
         cv_image = BRIDGE.imgmsg_to_cv2(new_frame, "bgr8")
     except CvBridgeError, e:
         rospy.logerr(e)

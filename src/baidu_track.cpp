@@ -1,9 +1,36 @@
+/******************************************************************************
+*
+* The MIT License (MIT)
+*
+* Copyright (c) 2018 Bluewhale Robot
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*
+* Author: Randoms
+*******************************************************************************/
+
 #include "baidu_track.h"
 
 namespace XiaoqiangTrack
 {
 
-BaiduTrack::BaiduTrack()
+BaiduTrack::BaiduTrack(ros::NodeHandle nh) : PoseTracker(nh)
 {
     ros::param::param<std::string>("~app_id", app_id, "");
     ros::param::param<std::string>("~api_key", api_key, "");
@@ -25,71 +52,45 @@ cv::Rect2d BaiduTrack::getBodyRect(sensor_msgs::Image frame)
         ROS_ERROR_STREAM("Encode image error");
     }
     std::string image_data = std::string(buf.begin(), buf.end());
-    // client->access_token = "";
     Json::Value body_info = client->body_analysis(image_data, aip::null);
-    ROS_INFO_STREAM(body_info.toStyledString());
-    if(body_info.get("error_code", "").asString() == "null")
-    {
-        ROS_INFO_STREAM("Call API Failed");
-        client->access_token = "";
-    }
-        
+
     int person_num = body_info["person_num"].asInt();
     if (person_num > 0)
     {
-        ROS_INFO_STREAM("getBodyRect OK1");
         cv::Rect2d center_person;
         Json::Value persons = body_info["person_info"];
-
-        ROS_INFO_STREAM("getBodyRect OK2");
         std::vector<cv::Rect2d> bodys;
         for (int i = 0; i < persons.size(); i++)
         {
-            ROS_INFO_STREAM("getBodyRect OK3");
             Json::Value person_info = persons[i];
-            Point right_hip(
+            cv::Point right_hip(
                 person_info["body_parts"]["right_hip"]["x"].asFloat(),
                 person_info["body_parts"]["right_hip"]["y"].asFloat());
-            Point left_hip(
+            cv::Point left_hip(
                 person_info["body_parts"]["left_hip"]["x"].asFloat(),
                 person_info["body_parts"]["left_hip"]["y"].asFloat());
-            Point nose(
+            cv::Point nose(
                 person_info["body_parts"]["nose"]["x"].asFloat(),
                 person_info["body_parts"]["nose"]["y"].asFloat());
-            std::vector<Point> rect_points{right_hip, left_hip, nose};
-            std::vector<float> person_location = get_rect(rect_points);
-            ROS_INFO_STREAM("getBodyRect OK4");
-            if (person_location[2] < 50)
+            std::vector<cv::Point> rect_points{right_hip, left_hip, nose};
+            cv::Rect2d person_location = getRect(rect_points);
+            if (person_location.height < 50)
             {
                 // 最小宽度50
-                person_location[2] = 50;
+                person_location.height = 50;
             }
 
-            if(person_location[2] > 200)
+            if (person_location.width > 200)
             {
                 // 正常不应该这么宽，识别错误
                 continue;
             }
-            bodys.push_back(cv::Rect2d(person_location[0], person_location[1], person_location[2], person_location[3]));
-
-            ROS_INFO_STREAM("getBodyRect OK5");
-        }
-        // center_person
-        ROS_INFO_STREAM("bodys");
-        for(int i=0;i<bodys.size(); i++)
-        {
-            ROS_INFO_STREAM("rect: " << bodys[i]);
+            bodys.push_back(person_location);
         }
         center_person = selectTarget(bodys);
-        ROS_INFO_STREAM("center persion: " << center_person);
-        cv::rectangle(
-            cv_image,
-            cvPoint(int(center_person.x), int(center_person.y)),
-            cvPoint(int(center_person.x + center_person.width), int(center_person.y + center_person.height)),
-            cvScalar(255, 0, 0));
         return center_person;
     }
-    return cv::Rect2d(0,0,0,0);
+    return cv::Rect2d(0, 0, 0, 0);
 }
 
 } // namespace XiaoqiangTrack

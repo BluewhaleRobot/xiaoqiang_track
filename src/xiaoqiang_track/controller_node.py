@@ -25,40 +25,53 @@
 # Author: Randoms
 #
 
-import rospy
-from xiaoqiang_track.msg import TrackTarget
-from geometry_msgs.msg import Twist
-from pid import PID
 import math
+
+import rospy
+from geometry_msgs.msg import Twist
+from xiaoqiang_track.msg import TrackTarget
+
+from pid import PID
 
 SPEED_PUB = None
 pid_controller = None
 max_linear_speed = 0
 max_angle_speed = 0
-lost_flag = False
 
 
 def update_target(target):
-    global lost_flag
     if SPEED_PUB == None:
         return
+
+    # 处理丢失情况，尝试找回
     if target.x < 1 or target.y < 1:
-        lost_flag = True
         speed = Twist()
+        if pid_controller.output > 0.5:
+            speed.angular.z = 0.2
+        elif pid_controller.output < -0.5:
+            speed.angular.z = -0.2
         SPEED_PUB.publish(speed)
         return
+
     speed = Twist()
-    rospy.loginfo(target)
     pid_controller.update(target.x - 320)
     output = pid_controller.output
     rospy.loginfo("output: {output}".format(output=output))
     if output > max_angle_speed:
         output = max_angle_speed
     speed.angular.z = output
-    speed.linear.x = max_linear_speed * math.exp(-(target.x - 320.0)*(target.x - 320.0)/ (2 * 40*40))
-    
+    speed.linear.x = max_linear_speed * \
+        math.exp(-(target.x - 320.0)*(target.x - 320.0) / (2 * 40*40))
+
+    # 已靠近跟踪目标
+    # if target.height > 140 and target.height < 180:
+    #     speed.linear.x = 0
+    # if target.height > 200:
+    #     speed.linear.x = -0.1
+
     SPEED_PUB.publish(speed)
-        
+
+
 if __name__ == "__main__":
     rospy.init_node("xiaoqiang_tracking_controller", anonymous=True)
     SPEED_PUB = rospy.Publisher("~cmd_vel", Twist)
@@ -69,9 +82,8 @@ if __name__ == "__main__":
     sample_rate = rospy.get_param("~sample_rate", 30)
     max_linear_speed = float(rospy.get_param("~max_linear_speed", 0.8))
     max_angle_speed = float(rospy.get_param("~max_angle_speed", 1))
-    pid_controller = PID(p,i,d)
+    pid_controller = PID(p, i, d)
     pid_controller.setSampleTime(1 / sample_rate)
 
-    
     rospy.Subscriber("~target", TrackTarget, update_target)
     rospy.spin()
