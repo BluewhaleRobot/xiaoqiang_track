@@ -1,31 +1,54 @@
 <launch>
+    <!-- body_pose 人体识别节点 -->
     <node name="body_pose" pkg="body_pose" type="body_pose_node.py">
+        <!-- 处理宽度 -->
         <param name="process_width" value="200" />
+        <!-- 处理高度，由于高分辨率图像处理起来比较慢，所以可以先压缩分辨率再进行处理。 -->
         <param name="process_height" value="150" />
+        <!-- 最小置信点数，只有当识别特征点大于此值时才认为识别结果是可靠的 -->
         <param name="conf_min_count" value="3" />
     </node>
     
+    <!-- 跟踪运动控制节点 -->
     <node name="tracking_controller_node" pkg="xiaoqiang_track" type="controller_node.py">
+        <!-- 运动控制PID参数中的P -->
         <param name="p" value="0.007" />
+        <!-- 运动控制PID参数中的I -->
         <param name="i" value="0.0045" />
+        <!-- 运动控制PID参数中的D -->
         <param name="d" value="0.001" />
+        <!-- 运动控制PID的采样率 -->
         <param name="sample_rate" value="30" />
+        <!-- 最大角速度，单位为 rad/s -->
         <param name="max_angle_speed" value="1" />
+        <!-- 最大线速度，单位为 m/s -->
         <param name="max_linear_speed" value="0.4" />
+        <!-- 底盘速度控制topic -->
         <remap from="~cmd_vel" to="/cmd_vel" />
+        <!-- 跟踪的目标位置topic -->
         <remap from="~target" to="/xiaoqiang_tracking_node/target" />
     </node>
 
+    <!-- 跟踪节点 -->
     <node name="xiaoqiang_tracking_node" pkg="xiaoqiang_track" type="tracking_node" output="screen">
+        <!-- 人体识别程序选项，目前支持baidu和body_pose -->
         <param name="pose_tracker" value="body_pose" />
+        <!-- 主跟踪程序算法 -->
         <param name="tracker_main" value="MOSSE" />
+        <!-- 辅助跟踪算法，当主跟踪算法失效时使用辅助算法的结果 -->
         <param name="tracker_aided" value="MEDIANFLOW" />
+        <!-- 定时检测是否正常追踪，单位为秒 -->
         <param name="watch_dog" value="2" />
+        <!-- 跟踪图像的话题 -->
         <remap from="~image" to="/camera_node/image_raw" />
+        <!-- 语音功能话题 -->
         <remap from="~text" to="/xiaoqiang_tts/text" />
+        <!-- 人体识别服务 -->
         <remap from="~get_body_pose" to="/body_pose/get_body_pose" />
     </node>
 
+    <!-- 语音合成节点 -->
     <include file="$(find xiaoqiang_tts)/launch/tts_xunfei.launch" />
+    <!-- 摄像头节点，如果不是小强，要修改成自己的摄像头节点 -->
     <include file="$(find usb_cam)/launch/ov2610.launch" />
 </launch>
