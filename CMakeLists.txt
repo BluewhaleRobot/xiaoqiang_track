@@ -20,7 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
 )
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 3.2.0 REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
 pkg_check_modules(JSONCPP REQUIRED jsoncpp)
