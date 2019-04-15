@@ -57,6 +57,8 @@ add_executable(tracking_node
   ${PROJECT_SOURCE_DIR}/src/body_pose_track.cpp
 )
 
+add_dependencies(tracking_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+
 target_link_libraries(tracking_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
